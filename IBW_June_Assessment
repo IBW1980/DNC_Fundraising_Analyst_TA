@@ -1,0 +1,46 @@
+DNC Fundraising Analyst Assessment Responses via PDF (saving into github to make accessible)
+
+
+1. According to the donations_base_table, how many total donations, unique
+donors and revenue did the email from (fictitious) Senator Anne King generate by
+day? (All the donations in the donations_base_table are from that single
+campaign).
+
+SELECT count(contribution_id) as total_donation 
+, count (distinct donor_id) as unique_donor
+, sum (gift_amount) as revenue
+, gift_date
+FROM `famous-mix-318405.dnc_assessment.donations_base_table` 
+GROUP BY gift_date
+ORDER BY gift_date DESC 
+
+2. What was the overall open rate of this email campaign? This is defined as the
+percent of total sent emails that were opened. Round to the nearest hundredth.
+
+SELECT ROUND((sum(opens)/sum(total_sent))*100,2) as open_rate_percentage 
+FROM `famous-mix-318405.dnc_assessment.campaign_metadata` 
+
+3. What was the conversion rate for new monthly recurring gifts from the same
+email? The conversion rate is defined as the percentage of new gifts from the
+email that were set up to be recurring monthly gifts. Express this as a percentage
+(string type with suffixed “%”) rounded to the nearest integer.
+
+SELECT EXTRACT(month FROM gift_date) as gift_month
+, (Cast (((select sum(gift_amount) 
+from `famous-mix-318405.dnc_assessment.processor_metadata`
+where recurring_period in ('monthly')
+and recurring_sequence in ('1') ) 
+/ sum(cast(gift_amount as int)) *100) as string) + "%") as conversion_rate
+
+FROM `famous-mix-318405.dnc_assessment.processor_metadata` 
+GROUP BY gift_month
+
+4. How many gifts are still recurring in May generated from this email same date 2021-02-27?  For these “active” gifts, how much total revenue have they generated to date?
+
+SELECT sum(proc.gift_amount) as gift_sum
+, count(proc.line_item_id) as gift_recuring
+FROM `famous-mix-318405.dnc_assessment.processor_metadata` as proc
+JOIN `famous-mix-318405.dnc_assessment.campaign_metadata` as camp
+ON proc.ref_code_variant = camp.variant_name
+WHERE camp.email_send_date ='2021-02-27'
+and proc.recurring_period in ('monthly')
